@@ -3,12 +3,23 @@
  * Date helpers, location utils, formatting
  */
 
-const IST = { country: 'India', timezone: 'Asia/Kolkata', utcOffset: 5.5 };
+// Order and labels of the location picker's groups.
+export const REGIONS = [
+    { id: 'North', label: 'North India' },
+    { id: 'West', label: 'West India' },
+    { id: 'Central', label: 'Central India' },
+    { id: 'East', label: 'East India' },
+    { id: 'Northeast', label: 'Northeast India' },
+    { id: 'South', label: 'South India' },
+    { id: 'SouthAsia', label: 'Nepal, Sri Lanka & Bangladesh' },
+    { id: 'AsiaPacific', label: 'Southeast Asia & Pacific' },
+    { id: 'MiddleEastAfrica', label: 'Middle East & Africa' },
+    { id: 'Europe', label: 'Europe' },
+    { id: 'Americas', label: 'Americas' }
+];
 
-// Order in which the location picker groups cities.
-export const REGIONS = ['North', 'West', 'Central', 'East', 'Northeast', 'South'];
-
-// [id, name, state, region, latitude, longitude]. Ids are saved in users' browsers: never rename one.
+// [id, name, state or country, region, latitude, longitude, IANA time zone (default India)].
+// Ids are saved in users' browsers: never rename one.
 const CITIES = [
     ['delhi', 'New Delhi', 'Delhi', 'North', 28.6139, 77.2090],
     ['agra', 'Agra', 'Uttar Pradesh', 'North', 27.1767, 78.0081],
@@ -92,18 +103,70 @@ const CITIES = [
     ['udupi', 'Udupi', 'Karnataka', 'South', 13.3409, 74.7421],
     ['vijayawada', 'Vijayawada', 'Andhra Pradesh', 'South', 16.5062, 80.6480],
     ['visakhapatnam', 'Visakhapatnam', 'Andhra Pradesh', 'South', 17.6868, 83.2185],
-    ['warangal', 'Warangal', 'Telangana', 'South', 17.9689, 79.5941]
+    ['warangal', 'Warangal', 'Telangana', 'South', 17.9689, 79.5941],
+
+    ['kathmandu', 'Kathmandu', 'Nepal', 'SouthAsia', 27.7172, 85.3240, 'Asia/Kathmandu'],
+    ['colombo', 'Colombo', 'Sri Lanka', 'SouthAsia', 6.9271, 79.8612, 'Asia/Colombo'],
+    ['dhaka', 'Dhaka', 'Bangladesh', 'SouthAsia', 23.8103, 90.4125, 'Asia/Dhaka'],
+
+    ['singapore', 'Singapore', 'Singapore', 'AsiaPacific', 1.3521, 103.8198, 'Asia/Singapore'],
+    ['kuala-lumpur', 'Kuala Lumpur', 'Malaysia', 'AsiaPacific', 3.1390, 101.6869, 'Asia/Kuala_Lumpur'],
+    ['bangkok', 'Bangkok', 'Thailand', 'AsiaPacific', 13.7563, 100.5018, 'Asia/Bangkok'],
+    ['bali', 'Denpasar (Bali)', 'Indonesia', 'AsiaPacific', -8.6705, 115.2126, 'Asia/Makassar'],
+    ['hong-kong', 'Hong Kong', 'Hong Kong', 'AsiaPacific', 22.3193, 114.1694, 'Asia/Hong_Kong'],
+    ['sydney', 'Sydney', 'Australia', 'AsiaPacific', -33.8688, 151.2093, 'Australia/Sydney'],
+    ['melbourne', 'Melbourne', 'Australia', 'AsiaPacific', -37.8136, 144.9631, 'Australia/Melbourne'],
+    ['perth', 'Perth', 'Australia', 'AsiaPacific', -31.9505, 115.8605, 'Australia/Perth'],
+    ['auckland', 'Auckland', 'New Zealand', 'AsiaPacific', -36.8485, 174.7633, 'Pacific/Auckland'],
+    ['suva', 'Suva', 'Fiji', 'AsiaPacific', -18.1416, 178.4419, 'Pacific/Fiji'],
+
+    ['dubai', 'Dubai', 'UAE', 'MiddleEastAfrica', 25.2048, 55.2708, 'Asia/Dubai'],
+    ['muscat', 'Muscat', 'Oman', 'MiddleEastAfrica', 23.5880, 58.3829, 'Asia/Muscat'],
+    ['doha', 'Doha', 'Qatar', 'MiddleEastAfrica', 25.2854, 51.5310, 'Asia/Qatar'],
+    ['kuwait-city', 'Kuwait City', 'Kuwait', 'MiddleEastAfrica', 29.3759, 47.9774, 'Asia/Kuwait'],
+    ['nairobi', 'Nairobi', 'Kenya', 'MiddleEastAfrica', -1.2921, 36.8219, 'Africa/Nairobi'],
+    ['durban', 'Durban', 'South Africa', 'MiddleEastAfrica', -29.8587, 31.0218, 'Africa/Johannesburg'],
+    ['port-louis', 'Port Louis', 'Mauritius', 'MiddleEastAfrica', -20.1609, 57.5012, 'Indian/Mauritius'],
+
+    ['london', 'London', 'United Kingdom', 'Europe', 51.5074, -0.1278, 'Europe/London'],
+    ['leicester', 'Leicester', 'United Kingdom', 'Europe', 52.6369, -1.1398, 'Europe/London'],
+    ['amsterdam', 'Amsterdam', 'Netherlands', 'Europe', 52.3676, 4.9041, 'Europe/Amsterdam'],
+    ['frankfurt', 'Frankfurt', 'Germany', 'Europe', 50.1109, 8.6821, 'Europe/Berlin'],
+    ['paris', 'Paris', 'France', 'Europe', 48.8566, 2.3522, 'Europe/Paris'],
+
+    ['new-york', 'New York', 'USA', 'Americas', 40.7128, -74.0060, 'America/New_York'],
+    ['washington-dc', 'Washington, D.C.', 'USA', 'Americas', 38.9072, -77.0369, 'America/New_York'],
+    ['atlanta', 'Atlanta', 'USA', 'Americas', 33.7490, -84.3880, 'America/New_York'],
+    ['chicago', 'Chicago', 'USA', 'Americas', 41.8781, -87.6298, 'America/Chicago'],
+    ['houston', 'Houston', 'USA', 'Americas', 29.7604, -95.3698, 'America/Chicago'],
+    ['dallas', 'Dallas', 'USA', 'Americas', 32.7767, -96.7970, 'America/Chicago'],
+    ['san-francisco', 'San Francisco', 'USA', 'Americas', 37.7749, -122.4194, 'America/Los_Angeles'],
+    ['los-angeles', 'Los Angeles', 'USA', 'Americas', 34.0522, -118.2437, 'America/Los_Angeles'],
+    ['seattle', 'Seattle', 'USA', 'Americas', 47.6062, -122.3321, 'America/Los_Angeles'],
+    ['toronto', 'Toronto', 'Canada', 'Americas', 43.6532, -79.3832, 'America/Toronto'],
+    ['vancouver', 'Vancouver', 'Canada', 'Americas', 49.2827, -123.1207, 'America/Vancouver'],
+    ['port-of-spain', 'Port of Spain', 'Trinidad & Tobago', 'Americas', 10.6549, -61.5019, 'America/Port_of_Spain'],
+    ['georgetown', 'Georgetown', 'Guyana', 'Americas', 6.8013, -58.1551, 'America/Guyana'],
+    ['paramaribo', 'Paramaribo', 'Suriname', 'Americas', 5.8520, -55.2038, 'America/Paramaribo']
 ];
 
-export const LOCATIONS = Object.fromEntries(CITIES.map(([id, name, state, region, lat, lng]) =>
-    [id, { id, name, state, region, lat, lng, ...IST }]));
+export const LOCATIONS = Object.fromEntries(CITIES.map(([id, name, state, region, lat, lng, timezone = 'Asia/Kolkata']) =>
+    [id, { id, name, state, region, lat, lng, timezone }]));
 
 export const DEFAULT_LOCATION = LOCATIONS.bengaluru;
 
-/**
- * A location for the device's own coordinates. Its clock is the device's time zone,
- * which is the clock all of the app's local times are read on.
- */
+/** The device's IANA time zone, e.g. "Asia/Kolkata". */
+export function deviceTimeZone() {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/** Whether two IANA names are the same zone; aliases such as Asia/Kolkata and Asia/Calcutta match. */
+export function sameTimeZone(a, b) {
+    const canonical = tz => new Intl.DateTimeFormat('en-US', { timeZone: tz }).resolvedOptions().timeZone;
+    return canonical(a) === canonical(b);
+}
+
+/** A location for the device's own coordinates, on the device's time zone. */
 export function deviceLocation(lat, lng) {
     const ns = lat >= 0 ? 'N' : 'S';
     const ew = lng >= 0 ? 'E' : 'W';
@@ -113,8 +176,88 @@ export function deviceLocation(lat, lng) {
         state: `${Math.abs(lat).toFixed(2)}°${ns}, ${Math.abs(lng).toFixed(2)}°${ew}`,
         lat,
         lng,
-        utcOffset: -new Date().getTimezoneOffset() / 60
+        timezone: deviceTimeZone()
     };
+}
+
+// ============================================================
+//  TIME ZONES: a location's wall clock
+// ============================================================
+const zonedFormatters = new Map();
+
+function zonedFormatter(timeZone) {
+    let formatter = zonedFormatters.get(timeZone);
+    if (!formatter) {
+        formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone, hourCycle: 'h23',
+            year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: 'numeric', minute: 'numeric', second: 'numeric'
+        });
+        zonedFormatters.set(timeZone, formatter);
+    }
+    return formatter;
+}
+
+// Offsets can only change on 15-minute boundaries (every zone's offset and transition time is
+// a multiple of 15 minutes), so one Intl lookup per zone per quarter hour is exact.
+const QUARTER_HOUR_MS = 15 * 60 * 1000;
+const offsetCache = new Map();
+
+function utcOffsetAt(date, timeZone) {
+    const slot = Math.floor(date.getTime() / QUARTER_HOUR_MS);
+    const key = `${timeZone}|${slot}`;
+    let offset = offsetCache.get(key);
+    if (offset === undefined) {
+        const instant = new Date(slot * QUARTER_HOUR_MS);
+        const p = {};
+        for (const { type, value } of zonedFormatter(timeZone).formatToParts(instant)) p[type] = value;
+        const wallAsUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+        offset = Math.round((wallAsUtc - instant.getTime()) / 60000) / 60;
+        if (offsetCache.size > 20000) offsetCache.clear();
+        offsetCache.set(key, offset);
+    }
+    return offset;
+}
+
+/**
+ * Calendar date, clock time, weekday (0 = Sunday) and `utcOffset` — hours the zone is ahead
+ * of UTC (5.5 for India, -4 for New York in summer) — of an instant in a time zone.
+ */
+export function zonedInfo(date, timeZone) {
+    const utcOffset = utcOffsetAt(date, timeZone);
+    const wall = new Date(date.getTime() + utcOffset * 3600000);
+    return {
+        year: wall.getUTCFullYear(), month: wall.getUTCMonth() + 1, day: wall.getUTCDate(),
+        hour: wall.getUTCHours(), minute: wall.getUTCMinutes(), second: wall.getUTCSeconds(),
+        weekday: wall.getUTCDay(), utcOffset
+    };
+}
+
+export const zonedParts = zonedInfo;
+
+export function utcOffsetHours(date, timeZone) {
+    return zonedInfo(date, timeZone).utcOffset;
+}
+
+/** The instant at which a time zone's clock reads the given date and decimal hour. */
+export function zonedDateTime(year, month, day, hours, timeZone) {
+    const wall = Date.UTC(year, month - 1, day) + hours * 3600000;
+    let t = wall - utcOffsetHours(new Date(wall), timeZone) * 3600000;
+    t = wall - utcOffsetHours(new Date(t), timeZone) * 3600000; // settle across a DST change
+    return new Date(t);
+}
+
+/** The calendar date in a time zone, shifted by whole days: { year, month, day }. */
+export function zonedDate(date, timeZone, dayOffset = 0) {
+    const p = zonedParts(date, timeZone);
+    const d = new Date(Date.UTC(p.year, p.month - 1, p.day + dayOffset));
+    return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+/** Short time zone name for display, e.g. "GMT+5:30", "EST", "GMT+11". */
+export function timeZoneLabel(timeZone, date = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' }).formatToParts(date);
+    return parts.find(p => p.type === 'timeZoneName')?.value || timeZone;
 }
 
 /**
@@ -125,13 +268,14 @@ export function getAppDate() {
 }
 
 /**
- * Format date for display
+ * Format date for display, as the calendar reads in the given time zone
  */
-export function formatGregorianDate(date) {
+export function formatGregorianDate(date, timeZone = deviceTimeZone()) {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const months = ['January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'];
-    return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    const p = zonedParts(date, timeZone);
+    return `${days[p.weekday]}, ${months[p.month - 1]} ${p.day}, ${p.year}`;
 }
 
 /**

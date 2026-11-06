@@ -3,7 +3,10 @@
  * Initializes panchang, mandala, navigation, and renders all screens.
  */
 
-import { getAppDate, formatGregorianDate, DEFAULT_LOCATION, LOCATIONS, REGIONS, deviceLocation } from './utils.js';
+import {
+    getAppDate, formatGregorianDate, DEFAULT_LOCATION, LOCATIONS, REGIONS, deviceLocation,
+    deviceTimeZone, sameTimeZone, timeZoneLabel, zonedDate
+} from './utils.js';
 import { computePanchang, panchangForDate } from './panchang.js';
 import { findFestivals, getUpcomingFestivals, getAllFestivals } from './festivals.js';
 import { initMandala, updateMandala } from './mandala.js';
@@ -241,14 +244,19 @@ function renderHeader() {
     if (dateEl) {
         const baseDate = getAppDate();
         const offsetDate = new Date(baseDate.getTime() + timeOffsetHours * 60 * 60 * 1000);
-        dateEl.textContent = formatGregorianDate(offsetDate);
+        dateEl.textContent = formatGregorianDate(offsetDate, currentLocation.timezone);
     }
 
     const tithiEl = document.getElementById('tithi-headline');
     if (tithiEl) tithiEl.textContent = panchang.tithi.fullName;
 
     const locEl = document.getElementById('loc-name');
-    if (locEl) locEl.textContent = `${currentLocation.name}, ${currentLocation.state}`;
+    if (locEl) {
+        // Times on the page are on the location's clock; say so when that isn't the device's.
+        const zone = sameTimeZone(currentLocation.timezone, deviceTimeZone())
+            ? '' : ` · ${timeZoneLabel(currentLocation.timezone)}`;
+        locEl.textContent = `${currentLocation.name}, ${currentLocation.state}${zone}`;
+    }
 }
 
 // ============================================================
@@ -532,22 +540,23 @@ function setLocation(location) {
     updateMandala(panchang);
     refreshUI();
     showLocationSetting();
+    syncConverterDate(); // "today" may be a different date at the new location
 }
 
 function showLocationSetting(message) {
     document.getElementById('settings-loc').textContent =
-        message || `${currentLocation.name}, ${currentLocation.state}`;
+        message || `${currentLocation.name}, ${currentLocation.state} · ${timeZoneLabel(currentLocation.timezone)}`;
     if (!message) document.getElementById('loc-select').value = currentLocation.id;
 }
 
 function setupLocationPicker() {
     const select = document.getElementById('loc-select');
-    const groups = REGIONS.map(region => {
+    const groups = REGIONS.map(({ id: region, label }) => {
         const options = Object.values(LOCATIONS)
             .filter(loc => loc.region === region)
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(loc => `<option value="${loc.id}">${loc.name}</option>`).join('');
-        return `<optgroup label="${region} India">${options}</optgroup>`;
+        return `<optgroup label="${label}">${options}</optgroup>`;
     });
     select.innerHTML =
         ('geolocation' in navigator ? '<option value="current">📍 Use my location</option>' : '') +
@@ -588,12 +597,10 @@ function setupLocationPicker() {
 // ============================================================
 //  DATE CONVERTER
 // ============================================================
+/** yyyy-mm-dd of an instant on the current location's calendar. */
 function localISODate(date) {
-    return [
-        date.getFullYear(),
-        String(date.getMonth() + 1).padStart(2, '0'),
-        String(date.getDate()).padStart(2, '0')
-    ].join('-');
+    const { year, month, day } = zonedDate(date, currentLocation.timezone);
+    return [year, String(month).padStart(2, '0'), String(day).padStart(2, '0')].join('-');
 }
 
 /** Roll the converter's default date over at midnight, unless the user picked another date. */

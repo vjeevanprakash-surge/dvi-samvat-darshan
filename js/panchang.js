@@ -6,7 +6,7 @@
 
 import {
     degToRad, radToDeg, normalizeDeg, julianCenturies,
-    formatTime, DEFAULT_LOCATION
+    formatTime, DEFAULT_LOCATION, zonedInfo, zonedDateTime
 } from './utils.js';
 
 // ============================================================
@@ -418,10 +418,10 @@ function amantaMonth(jd) {
 //  MAIN: Compute full Panchang for a date
 // ============================================================
 export function computePanchang(date, location = DEFAULT_LOCATION) {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const dayOfWeek = date.getDay();
+    // Calendar date, weekday and clock offset as they are at the location.
+    const local = zonedInfo(date, location.timezone);
+    const { year, month, day, utcOffset } = local;
+    const dayOfWeek = local.weekday;
 
     const jd = date.getTime() / 86400000 + 2440587.5;
     const jdSunrise = jd;
@@ -485,7 +485,7 @@ export function computePanchang(date, location = DEFAULT_LOCATION) {
     const karana2Name = KARANA_NAMES[karana2Index] || KARANA_NAMES[0];
 
     // --- SUNRISE / SUNSET ---
-    const { sunrise, sunset } = sunriseSunset(jd, location.lat, location.lng, location.utcOffset);
+    const { sunrise, sunset } = sunriseSunset(jd, location.lat, location.lng, utcOffset);
 
     // --- KAALS ---
     const rahu = rahuKaal(dayOfWeek, sunrise, sunset);
@@ -608,7 +608,8 @@ function elongationAt(date) {
  * Compute panchang for a different date (for date converter)
  */
 export function panchangForDate(year, month, day, location = DEFAULT_LOCATION) {
-    // A day's tithi is the one prevailing at sunrise; 6 AM local is a close stand-in.
-    const date = new Date(year, month - 1, day, 6);
-    return computePanchang(date, location);
+    // A day's tithi is the one prevailing at sunrise at the location.
+    const { timezone } = location;
+    const sunrise = computePanchang(zonedDateTime(year, month, day, 6, timezone), location).sun.sunriseDecimal;
+    return computePanchang(zonedDateTime(year, month, day, sunrise, timezone), location);
 }

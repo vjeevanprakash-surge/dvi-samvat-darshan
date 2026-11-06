@@ -4,7 +4,9 @@
  */
 
 import { computePanchang, tithiIndexAt, isBhadraAt } from './panchang.js';
-import { formatGregorianDate, DEFAULT_LOCATION } from './utils.js';
+import {
+    formatGregorianDate, DEFAULT_LOCATION, zonedDate, zonedDateTime, utcOffsetHours
+} from './utils.js';
 
 const FESTIVALS = [
     {
@@ -494,7 +496,8 @@ export function findFestivals(panchang) {
 //  OBSERVANCE TIME (kaala-vyapti)
 // ============================================================
 // A festival falls on the civil day whose observance window its tithi occupies.
-// Windows are in hours after local midnight, built from that day's sunrise and sunset:
+// Windows are in hours on the location's clock after the day's midnight, built from that
+// day's sunrise and sunset:
 // madhyahna / aparahna are the 3rd / 4th fifths of daylight, pradosh the three muhurtas
 // after sunset, nishita the muhurta around the middle of the night.
 const OBSERVANCE_WINDOWS = {
@@ -510,36 +513,41 @@ const OBSERVANCE_WINDOWS = {
 
 const observanceOf = fest => fest.observance || 'sunrise';
 
-function hoursAfter(midnight, hours) {
-    return new Date(midnight.getTime() + hours * 3600000);
+/**
+ * One civil day at a location: its calendar date and `at(hours)`, the instant at which the
+ * location's clock reads that many hours after the day's midnight (hours may pass 24).
+ * The UTC offset is taken at local noon, so a daylight-saving change in the small hours
+ * does not shift the daytime windows.
+ */
+function civilDay(date, location, dayOffset = 0) {
+    const { year, month, day } = zonedDate(date, location.timezone, dayOffset);
+    const noon = zonedDateTime(year, month, day, 12, location.timezone);
+    const offset = utcOffsetHours(noon, location.timezone);
+    const wallMidnight = Date.UTC(year, month - 1, day);
+    const at = hours => new Date(wallMidnight + (hours - offset) * 3600000);
+    return { noon, at, location };
 }
 
 /** Sunrise, sunset and the panchang at the midpoint of each observance window for one civil day. */
-function observeDay(midnight, location) {
-    const { sunriseDecimal: rise, sunsetDecimal: set } = computePanchang(hoursAfter(midnight, 6), location).sun;
+function observeDay(day) {
+    const { sunriseDecimal: rise, sunsetDecimal: set } = computePanchang(day.at(6), day.location).sun;
     const windows = {};
     for (const [kaal, windowOf] of Object.entries(OBSERVANCE_WINDOWS)) {
         const [start, end] = windowOf(rise, set);
-        windows[kaal] = { start, end, panchang: computePanchang(hoursAfter(midnight, (start + end) / 2)) };
+        windows[kaal] = { start, end, panchang: computePanchang(day.at((start + end) / 2), day.location) };
     }
-    return { midnight, windows, location };
+    return { ...day, windows };
 }
 
 /** Fraction of an observance window during which `tithi` prevails. */
-function windowCoverage(midnight, window, tithi) {
+function windowCoverage(day, window, tithi) {
     const SAMPLES = 9;
     let hits = 0;
     for (let s = 0; s < SAMPLES; s++) {
         const hours = window.start + (window.end - window.start) * s / (SAMPLES - 1);
-        if (tithiIndexAt(hoursAfter(midnight, hours)) === tithi) hits++;
+        if (tithiIndexAt(day.at(hours)) === tithi) hits++;
     }
     return hits / SAMPLES;
-}
-
-function nextMidnight(midnight) {
-    const d = new Date(midnight);
-    d.setDate(midnight.getDate() + 1);
-    return d;
 }
 
 /**
@@ -548,18 +556,18 @@ function nextMidnight(midnight) {
  * otherwise move to the next day if the tithi still prevails three muhurtas (2.4 h) after
  * that day's sunrise; otherwise keep the day — it is observed once Bhadra ends that night.
  */
-function bhadraPostponement(midnight, kaal, tithi, location) {
-    const { sunriseDecimal: rise, sunsetDecimal: set } = computePanchang(hoursAfter(midnight, 6), location).sun;
+function bhadraPostponement(day, kaal, tithi) {
+    const { sunriseDecimal: rise, sunsetDecimal: set } = computePanchang(day.at(6), day.location).sun;
     const [start, end] = OBSERVANCE_WINDOWS[kaal](rise, set);
     const SAMPLES = 9;
     for (let s = 0; s < SAMPLES; s++) {
-        const t = hoursAfter(midnight, start + (end - start) * s / (SAMPLES - 1));
+        const t = day.at(start + (end - start) * s / (SAMPLES - 1));
         if (tithiIndexAt(t) === tithi && !isBhadraAt(t)) return 0;
     }
 
-    const following = nextMidnight(midnight);
-    const nextRise = computePanchang(hoursAfter(following, 6), location).sun.sunriseDecimal;
-    return tithiIndexAt(hoursAfter(following, nextRise + 2.4)) === tithi ? 1 : 0;
+    const following = civilDay(day.noon, day.location, 1);
+    const nextRise = computePanchang(following.at(6), day.location).sun.sunriseDecimal;
+    return tithiIndexAt(following.at(nextRise + 2.4)) === tithi ? 1 : 0;
 }
 
 /**
@@ -580,14 +588,12 @@ function assignFestivals(day, next) {
 
         // Offsets may reach 2 after a Bhadra postponement; days are flushed in order, so that is safe.
         const place = (offset, f, tithi) => {
-            if (f.avoidBhadra) {
-                offset += bhadraPostponement(offset ? next.midnight : day.midnight, kaal, tithi, day.location);
-            }
+            if (f.avoidBhadra) offset += bhadraPostponement(offset ? next : day, kaal, tithi);
             assigned.push([offset, f]);
         };
 
         const deferToNext = there.panchang.tithi.index === tithiHere &&
-            windowCoverage(next.midnight, there, tithiHere) > windowCoverage(day.midnight, here, tithiHere);
+            windowCoverage(next, there, tithiHere) > windowCoverage(day, here, tithiHere);
         if (!deferToNext) {
             for (const f of findFestivals(here.panchang)) {
                 if (observanceOf(f) === kaal) place(0, f, tithiHere);
@@ -600,17 +606,17 @@ function assignFestivals(day, next) {
         const midHere = (here.start + here.end) / 2;
         let probeHours = null;
         for (let h = 1; h < 24; h++) { // a tithi lasts at least ~19 h
-            if (tithiIndexAt(hoursAfter(day.midnight, midHere + h)) === skipped) {
+            if (tithiIndexAt(day.at(midHere + h)) === skipped) {
                 probeHours = midHere + h;
                 break;
             }
         }
         if (probeHours === null) continue;
-        const probe = computePanchang(hoursAfter(day.midnight, probeHours));
+        const probe = computePanchang(day.at(probeHours), day.location);
 
-        const touches = (midnight, hours) => tithiIndexAt(hoursAfter(midnight, hours)) === skipped;
-        const offset = kaal === 'sunrise' || touches(day.midnight, here.end) ? 0
-            : touches(next.midnight, there.start) ? 1 : 0;
+        const touches = (d, hours) => tithiIndexAt(d.at(hours)) === skipped;
+        const offset = kaal === 'sunrise' || touches(day, here.end) ? 0
+            : touches(next, there.start) ? 1 : 0;
         for (const f of findFestivals(probe)) {
             if (observanceOf(f) === kaal) place(offset, f, skipped);
         }
@@ -619,7 +625,7 @@ function assignFestivals(day, next) {
 }
 
 /**
- * Get upcoming festivals (scans next 120 days dynamically)
+ * Get upcoming festivals (scans next 120 days dynamically), dated on the location's calendar
  */
 export function getUpcomingFestivals(startDate, limit = 5, location = DEFAULT_LOCATION) {
     const upcoming = [];
@@ -631,19 +637,12 @@ export function getUpcomingFestivals(startDate, limit = 5, location = DEFAULT_LO
     const todayFestivals = findFestivals(todayPanchang);
     todayFestivals.forEach(f => seenNames.add(f.name));
 
-    const midnightOf = i => {
-        const d = new Date(startDate);
-        d.setDate(startDate.getDate() + i);
-        d.setHours(0, 0, 0, 0);
-        return d;
-    };
-
     // Processing day i can place festivals on day i or i + 1, so day i is final once processed.
     const byDay = new Map();
-    let next = observeDay(midnightOf(0), location);
+    let next = observeDay(civilDay(startDate, location, 0));
     for (let i = 0; i <= scanLimit; i++) {
         const day = next;
-        next = observeDay(midnightOf(i + 1), location);
+        next = observeDay(civilDay(startDate, location, i + 1));
         for (const [offset, f] of assignFestivals(day, next)) {
             if (!byDay.has(i + offset)) byDay.set(i + offset, []);
             byDay.get(i + offset).push(f);
@@ -651,13 +650,15 @@ export function getUpcomingFestivals(startDate, limit = 5, location = DEFAULT_LO
 
         // Day 0 is included: a festival scheduled for today whose tithi hasn't begun yet
         // (e.g. Diwali morning, before Amavasya) is not among the current-tithi matches above.
-        for (const f of byDay.get(i) || []) {
+        // On a shared day, named festivals come before the recurring vrats (Amavasya, Ekadashi, …).
+        const sameDay = (byDay.get(i) || []).sort((a, b) => (a.lunarMonth === '*') - (b.lunarMonth === '*'));
+        for (const f of sameDay) {
             // Only show Major festivals in the "Upcoming" list to avoid clutter
             if (!seenNames.has(f.name) && f.importance === 'major') {
                 upcoming.push({
                     ...f,
                     daysAway: i,
-                    date: formatGregorianDate(day.midnight)
+                    date: formatGregorianDate(day.noon, location.timezone)
                 });
                 seenNames.add(f.name);
             }
