@@ -19,6 +19,8 @@ let currentLang = 'en';
 let timeOffsetHours = 0; // Phase 2: Time scrubbing
 let audioEnabled = true; // Enabled by default
 let audioCtx = null;
+let converterDefaultDate = null; // date the converter was last auto-filled with
+const REFRESH_INTERVAL_MS = 60 * 1000;
 
 // ============================================================
 //  INITIALIZATION
@@ -54,6 +56,7 @@ function init() {
     setupDateConverter();
     setupTimeScrubber();
     setupAudioToggle();
+    setupAutoRefresh();
 
     // 5. Offline support
     if ('serviceWorker' in navigator) {
@@ -163,6 +166,22 @@ function refreshUI() {
     renderMoonInfo();
     renderRingLabels();
     renderFestivals();
+}
+
+// ============================================================
+//  AUTO-REFRESH: keep "now" current while the page stays open
+// ============================================================
+function setupAutoRefresh() {
+    const tick = () => {
+        if (document.hidden) return;
+        updatePanchang();
+        updateMandala(panchang);
+        refreshUI();
+        syncConverterDate();
+    };
+    setInterval(tick, REFRESH_INTERVAL_MS);
+    // Background tabs throttle timers, so catch up as soon as the page is visible again.
+    document.addEventListener('visibilitychange', tick);
 }
 
 // ============================================================
@@ -360,7 +379,8 @@ function renderFestivals() {
 
     // Upcoming festivals
     upcomingFestivals.forEach(f => {
-        html += createFestivalCard(f, `${f.daysAway} days`);
+        const countdown = f.daysAway === 0 ? 'Today' : f.daysAway === 1 ? '1 day' : `${f.daysAway} days`;
+        html += createFestivalCard(f, countdown);
     });
 
     container.innerHTML = html;
@@ -497,13 +517,24 @@ function setupSettings() {
 // ============================================================
 //  DATE CONVERTER
 // ============================================================
-function setupDateConverter() {
-    const today = getAppDate();
-    document.getElementById('conv-date').value = [
-        today.getFullYear(),
-        String(today.getMonth() + 1).padStart(2, '0'),
-        String(today.getDate()).padStart(2, '0')
+function localISODate(date) {
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')
     ].join('-');
+}
+
+/** Roll the converter's default date over at midnight, unless the user picked another date. */
+function syncConverterDate() {
+    const input = document.getElementById('conv-date');
+    const today = localISODate(getAppDate());
+    if (converterDefaultDate === null || input.value === converterDefaultDate) input.value = today;
+    converterDefaultDate = today;
+}
+
+function setupDateConverter() {
+    syncConverterDate();
 
     const btn = document.getElementById('btn-convert');
     if (btn) {

@@ -648,8 +648,9 @@ export function getUpcomingFestivals(startDate, limit = 5) {
             if (!byDay.has(i + offset)) byDay.set(i + offset, []);
             byDay.get(i + offset).push(f);
         }
-        if (i === 0) continue;
 
+        // Day 0 is included: a festival scheduled for today whose tithi hasn't begun yet
+        // (e.g. Diwali morning, before Amavasya) is not among the current-tithi matches above.
         for (const f of byDay.get(i) || []) {
             // Only show Major festivals in the "Upcoming" list to avoid clutter
             if (!seenNames.has(f.name) && f.importance === 'major') {
