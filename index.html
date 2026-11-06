@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#08080F">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Dvi-Samvat Darshan — Premium Hindu Panchang</title>
+    <meta name="description" content="Premium Hindu panchang with dual calendar view (Vikram Samvat + Shaka Samvat), living digital mandala, and festival tracking.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕉️</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- ===== SCREENS ===== -->
+    <div id="screen-home" class="screen active">
+        <div class="app-container">
+            <header class="header">
+                <div class="samvat-badges">
+                    <span class="samvat-badge vikram" id="vs-badge">VS 2083 – Siddharthi</span>
+                    <span class="samvat-badge" id="shaka-badge">Shaka 1948 – Parabhava</span>
+                </div>
+                <div class="location-badge" id="location-badge">
+                    <span class="icon">📍</span><span id="loc-name">Bengaluru, Karnataka</span>
+                </div>
+                <div class="date-display">
+                    <div class="gregorian-date" id="gregorian-date">Friday, March 21, 2026</div>
+                    <div class="tithi-headline" id="tithi-headline">Chaitra Shukla Tritiya</div>
+                </div>
+            </header>
+            <section class="mandala-section">
+                <div class="mandala-canvas-wrap">
+                    <canvas id="mandalaCanvas"></canvas>
+                </div>
+                <div class="mandala-controls">
+                    <button id="btn-audio-toggle" class="btn-icon" title="Toggle Sound">
+                        <span id="audio-icon">🔇</span>
+                    </button>
+                </div>
+                <div class="time-scrub-container">
+                    <div class="time-label">
+                        <span>⏪ Past</span>
+                        <span id="scrub-status">Present Time</span>
+                        <span>Future ⏩</span>
+                    </div>
+                    <input type="range" id="time-scrubber" min="-48" max="48" value="0" step="1" class="time-slider">
+                    <button id="btn-reset-time" class="btn-reset-time" style="display:none">Reset to Now</button>
+                </div>
+            </section>
+            <div class="ring-labels" id="ring-labels"></div>
+            <div class="moon-info" id="moon-info"></div>
+            <div class="detail-row" id="detail-chips"></div>
+            <section class="timeline-section" id="timeline-badges"></section>
+            <section class="tithi-tracker-section" id="tithi-trackers"></section>
+            <section class="festivals-section">
+                <div class="section-title">🪔 Upcoming Festivals</div>
+                <div id="festival-cards"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- CALENDAR / DATE CONVERTER -->
+    <div id="screen-calendar" class="screen">
+        <div class="app-container">
+            <div class="screen-header"><h2>📅 Date Converter</h2><p class="screen-subtitle">Gregorian ↔ Samvat</p></div>
+            <div class="converter-section">
+                <label class="input-label">Gregorian Date</label>
+                <input type="date" id="conv-date" class="date-input">
+                <button class="btn-convert" id="btn-convert">🔄 Convert</button>
+                <div id="conv-result" class="conv-result"></div>
+            </div>
+            <div class="converter-section" style="margin-top:24px">
+                <div class="section-title">📋 Monthly Panchang</div>
+                <div id="monthly-grid" class="monthly-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FESTIVALS -->
+    <div id="screen-festivals" class="screen">
+        <div class="app-container">
+            <div class="screen-header"><h2>🪔 Festival Calendar</h2><p class="screen-subtitle">Major Hindu Festivals</p></div>
+            <div id="festival-full-list"></div>
+        </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="screen-settings" class="screen">
+        <div class="app-container">
+            <div class="screen-header"><h2>⚙️ Settings</h2><p class="screen-subtitle">Customize your Darshan</p></div>
+            <div class="settings-group">
+                <div class="setting-item">
+                    <div><div class="setting-label">🔔 Festival Notifications</div><div class="setting-desc">Get reminded before festivals</div></div>
+                    <label class="toggle"><input type="checkbox" id="toggle-notif"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="setting-item">
+                    <div><div class="setting-label">📍 Location</div><div class="setting-desc" id="settings-loc">Bengaluru, Karnataka</div></div>
+                    <select id="loc-select" class="loc-select">
+                        <option value="bengaluru">Bengaluru</option>
+                        <option value="delhi">New Delhi</option>
+                        <option value="mumbai">Mumbai</option>
+                        <option value="chennai">Chennai</option>
+                        <option value="kolkata">Kolkata</option>
+                        <option value="varanasi">Varanasi</option>
+                        <option value="ujjain">Ujjain</option>
+                        <option value="hyderabad">Hyderabad</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div><div class="setting-label">🌐 Language</div><div class="setting-desc">Interface language</div></div>
+                    <select id="lang-select" class="loc-select">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी</option>
+                        <option value="kn">ಕನ್ನಡ</option>
+                        <option value="sa">संस्कृतम्</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div><div class="setting-label">🎨 Mandala Style</div><div class="setting-desc">Visual theme</div></div>
+                    <select id="theme-select" class="loc-select">
+                        <option value="vedic">Vedic Classic</option>
+                        <option value="minimal">Minimal</option>
+                        <option value="vibrant">Vibrant</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-group" style="margin-top:20px">
+                <div class="setting-item">
+                    <div><div class="setting-label">🕉️ Vrat Tracker</div><div class="setting-desc">Track your fasting days</div></div>
+                    <label class="toggle"><input type="checkbox" id="toggle-vrat" checked><span class="toggle-slider"></span></label>
+                </div>
+            </div>
+            <div class="app-info">
+                <div class="app-info-name">🕉️ Dvi-Samvat Darshan</div>
+                <div class="app-info-ver">v1.0 · Pure PWA · No dependencies</div>
+                <div class="app-info-ver" style="margin-top:4px">Built with 🪷 for the Hindu community</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FESTIVAL DETAIL MODAL -->
+    <div id="festival-modal" class="modal-overlay" style="display:none">
+        <div class="modal-content" id="modal-body"></div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-screen="home"><span class="nav-icon">🕉️</span><span>Darshan</span></button>
+        <button class="nav-item" data-screen="calendar"><span class="nav-icon">📅</span><span>Calendar</span></button>
+        <button class="nav-item" data-screen="festivals"><span class="nav-icon">🏺</span><span>Festivals</span></button>
+        <button class="nav-item" data-screen="settings"><span class="nav-icon">⚙️</span><span>Settings</span></button>
+    </nav>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

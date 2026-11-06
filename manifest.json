@@ -1,0 +1,20 @@
+{
+    "name": "Dvi-Samvat Darshan",
+    "short_name": "Samvat",
+    "description": "Premium Hindu Panchang with dual calendar view (Vikram & Shaka Samvat), living digital mandala, and festival tracking.",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#08080F",
+    "theme_color": "#08080F",
+    "orientation": "portrait-primary",
+    "categories": ["lifestyle", "education"],
+    "lang": "en",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2308080F'/><text x='50' y='55' text-anchor='middle' dominant-baseline='middle' font-size='60'>🕉️</text></svg>",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
