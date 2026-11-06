@@ -3,7 +3,7 @@
  * Initializes panchang, mandala, navigation, and renders all screens.
  */
 
-import { getAppDate, formatGregorianDate, DEFAULT_LOCATION } from './utils.js';
+import { getAppDate, formatGregorianDate, DEFAULT_LOCATION, LOCATIONS, deviceLocation } from './utils.js';
 import { computePanchang, panchangForDate } from './panchang.js';
 import { findFestivals, getUpcomingFestivals, getAllFestivals } from './festivals.js';
 import { initMandala, updateMandala } from './mandala.js';
@@ -14,7 +14,8 @@ import { initMandala, updateMandala } from './mandala.js';
 let panchang = null;
 let festivals = [];
 let upcomingFestivals = [];
-let currentLocation = DEFAULT_LOCATION;
+const LOCATION_STORAGE_KEY = 'samvat.location';
+let currentLocation = loadSavedLocation();
 let currentLang = 'en';
 let timeOffsetHours = 0; // Phase 2: Time scrubbing
 let audioEnabled = true; // Enabled by default
@@ -74,7 +75,7 @@ function updatePanchang() {
     
     panchang = computePanchang(offsetDate, currentLocation);
     festivals = findFestivals(panchang);
-    upcomingFestivals = getUpcomingFestivals(offsetDate, 10);
+    upcomingFestivals = getUpcomingFestivals(offsetDate, 10, currentLocation);
 
     // Detect transitions for sound cues (Phase 4)
     if (prevPanchang && audioEnabled) {
@@ -492,15 +493,7 @@ function renderFullFestivalList() {
 //  SETTINGS & LOCATION
 // ============================================================
 function setupSettings() {
-    const locSelect = document.getElementById('loc-select');
-    if (locSelect) {
-        locSelect.addEventListener('change', (e) => {
-            // In a real app, update location object here
-            panchang = computePanchang(getAppDate(), currentLocation);
-            updateMandala(panchang);
-            refreshUI();
-        });
-    }
+    setupLocationPicker();
 
     const langSelect = document.getElementById('lang-select');
     if (langSelect) {
@@ -512,6 +505,77 @@ function setupSettings() {
             }
         });
     }
+}
+
+function loadSavedLocation() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(LOCATION_STORAGE_KEY));
+        if (saved?.id === 'current' && Number.isFinite(saved.lat) && Number.isFinite(saved.lng)) {
+            return deviceLocation(saved.lat, saved.lng);
+        }
+        if (saved?.id && LOCATIONS[saved.id]) return LOCATIONS[saved.id];
+    } catch { /* storage unavailable or unreadable: use the default */ }
+    return DEFAULT_LOCATION;
+}
+
+function saveLocation(location) {
+    const { id, lat, lng } = location;
+    try {
+        localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(id === 'current' ? { id, lat, lng } : { id }));
+    } catch { /* storage unavailable: the choice lasts for this visit only */ }
+}
+
+function setLocation(location) {
+    currentLocation = location;
+    saveLocation(location);
+    updatePanchang();
+    updateMandala(panchang);
+    refreshUI();
+    showLocationSetting();
+}
+
+function showLocationSetting(message) {
+    document.getElementById('settings-loc').textContent =
+        message || `${currentLocation.name}, ${currentLocation.state}`;
+    if (!message) document.getElementById('loc-select').value = currentLocation.id;
+}
+
+function setupLocationPicker() {
+    const select = document.getElementById('loc-select');
+    select.innerHTML = Object.values(LOCATIONS)
+        .map(loc => `<option value="${loc.id}">${loc.name}</option>`).join('') +
+        ('geolocation' in navigator ? '<option value="current">📍 Use my location</option>' : '');
+    showLocationSetting();
+
+    select.addEventListener('change', () => {
+        if (select.value !== 'current') {
+            setLocation(LOCATIONS[select.value]);
+            return;
+        }
+        showLocationSetting('Finding your location…');
+        navigator.geolocation.getCurrentPosition(
+            pos => setLocation(deviceLocation(pos.coords.latitude, pos.coords.longitude)),
+            err => {
+                showLocationSetting(); // put the dropdown back on the previous choice
+                showLocationSetting(err.code === err.PERMISSION_DENIED
+                    ? 'Location access was denied. Pick a city instead.'
+                    : "Couldn't get your location. Pick a city instead.");
+            },
+            { timeout: 15000, maximumAge: 10 * 60 * 1000 }
+        );
+    });
+
+    // The header badge is a shortcut to the picker.
+    const badge = document.getElementById('location-badge');
+    badge.setAttribute('role', 'button');
+    badge.setAttribute('tabindex', '0');
+    badge.title = 'Change location';
+    badge.style.cursor = 'pointer';
+    const openSettings = () => document.querySelector('.nav-item[data-screen="settings"]').click();
+    badge.addEventListener('click', openSettings);
+    badge.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSettings(); }
+    });
 }
 
 // ============================================================
@@ -542,7 +606,7 @@ function setupDateConverter() {
             const dateStr = document.getElementById('conv-date').value;
             if (!dateStr) return;
             const [y, m, d] = dateStr.split('-').map(Number);
-            const p = panchangForDate(y, m, d);
+            const p = panchangForDate(y, m, d, currentLocation);
             
             document.getElementById('conv-result').innerHTML = `
                 <div class="conv-row"><span class="conv-label">Vikram Samvat</span><span class="conv-value">${p.samvat.vikram.year}</span></div>

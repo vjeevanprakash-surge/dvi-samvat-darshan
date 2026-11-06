@@ -4,7 +4,7 @@
  */
 
 import { computePanchang, tithiIndexAt, isBhadraAt } from './panchang.js';
-import { formatGregorianDate } from './utils.js';
+import { formatGregorianDate, DEFAULT_LOCATION } from './utils.js';
 
 const FESTIVALS = [
     {
@@ -515,14 +515,14 @@ function hoursAfter(midnight, hours) {
 }
 
 /** Sunrise, sunset and the panchang at the midpoint of each observance window for one civil day. */
-function observeDay(midnight) {
-    const { sunriseDecimal: rise, sunsetDecimal: set } = computePanchang(hoursAfter(midnight, 6)).sun;
+function observeDay(midnight, location) {
+    const { sunriseDecimal: rise, sunsetDecimal: set } = computePanchang(hoursAfter(midnight, 6), location).sun;
     const windows = {};
     for (const [kaal, windowOf] of Object.entries(OBSERVANCE_WINDOWS)) {
         const [start, end] = windowOf(rise, set);
         windows[kaal] = { start, end, panchang: computePanchang(hoursAfter(midnight, (start + end) / 2)) };
     }
-    return { midnight, windows };
+    return { midnight, windows, location };
 }
 
 /** Fraction of an observance window during which `tithi` prevails. */
@@ -548,8 +548,8 @@ function nextMidnight(midnight) {
  * otherwise move to the next day if the tithi still prevails three muhurtas (2.4 h) after
  * that day's sunrise; otherwise keep the day — it is observed once Bhadra ends that night.
  */
-function bhadraPostponement(midnight, kaal, tithi) {
-    const { sunriseDecimal: rise, sunsetDecimal: set } = computePanchang(hoursAfter(midnight, 6)).sun;
+function bhadraPostponement(midnight, kaal, tithi, location) {
+    const { sunriseDecimal: rise, sunsetDecimal: set } = computePanchang(hoursAfter(midnight, 6), location).sun;
     const [start, end] = OBSERVANCE_WINDOWS[kaal](rise, set);
     const SAMPLES = 9;
     for (let s = 0; s < SAMPLES; s++) {
@@ -558,7 +558,7 @@ function bhadraPostponement(midnight, kaal, tithi) {
     }
 
     const following = nextMidnight(midnight);
-    const nextRise = computePanchang(hoursAfter(following, 6)).sun.sunriseDecimal;
+    const nextRise = computePanchang(hoursAfter(following, 6), location).sun.sunriseDecimal;
     return tithiIndexAt(hoursAfter(following, nextRise + 2.4)) === tithi ? 1 : 0;
 }
 
@@ -581,7 +581,7 @@ function assignFestivals(day, next) {
         // Offsets may reach 2 after a Bhadra postponement; days are flushed in order, so that is safe.
         const place = (offset, f, tithi) => {
             if (f.avoidBhadra) {
-                offset += bhadraPostponement(offset ? next.midnight : day.midnight, kaal, tithi);
+                offset += bhadraPostponement(offset ? next.midnight : day.midnight, kaal, tithi, day.location);
             }
             assigned.push([offset, f]);
         };
@@ -621,13 +621,13 @@ function assignFestivals(day, next) {
 /**
  * Get upcoming festivals (scans next 120 days dynamically)
  */
-export function getUpcomingFestivals(startDate, limit = 5) {
+export function getUpcomingFestivals(startDate, limit = 5, location = DEFAULT_LOCATION) {
     const upcoming = [];
     const scanLimit = 120; // Look ahead 4 months
     const seenNames = new Set();
 
     // Add today's festivals to seenNames so we don't repeat them in "Upcoming"
-    const todayPanchang = computePanchang(startDate);
+    const todayPanchang = computePanchang(startDate, location);
     const todayFestivals = findFestivals(todayPanchang);
     todayFestivals.forEach(f => seenNames.add(f.name));
 
@@ -640,10 +640,10 @@ export function getUpcomingFestivals(startDate, limit = 5) {
 
     // Processing day i can place festivals on day i or i + 1, so day i is final once processed.
     const byDay = new Map();
-    let next = observeDay(midnightOf(0));
+    let next = observeDay(midnightOf(0), location);
     for (let i = 0; i <= scanLimit; i++) {
         const day = next;
-        next = observeDay(midnightOf(i + 1));
+        next = observeDay(midnightOf(i + 1), location);
         for (const [offset, f] of assignFestivals(day, next)) {
             if (!byDay.has(i + offset)) byDay.set(i + offset, []);
             byDay.get(i + offset).push(f);

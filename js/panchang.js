@@ -201,38 +201,34 @@ function moonLongitude(jd) {
 // ============================================================
 //  SUNRISE / SUNSET (simplified for a location)
 // ============================================================
+/**
+ * Sunrise and sunset as decimal hours on the location's standard clock (NOAA solar
+ * equations: equation of time plus the hour angle for a −0.833° apparent horizon).
+ */
 function sunriseSunset(jd, lat, lng, utcOffset) {
     const T = julianCenturies(jd);
-    const M = normalizeDeg(357.5291 + 35999.0503 * T);
-    const C = 1.9148 * Math.sin(degToRad(M)) + 0.02 * Math.sin(degToRad(2 * M));
-    const lambdaSun = normalizeDeg(M + C + 180 + 102.9372);
-    const declination = radToDeg(Math.asin(Math.sin(degToRad(lambdaSun)) * Math.sin(degToRad(23.44))));
+    const L0 = degToRad(normalizeDeg(280.46646 + 36000.76983 * T));
+    const M = degToRad(normalizeDeg(357.52911 + 35999.05029 * T));
+    const e = 0.016708634 - 0.000042037 * T;
+    const epsilon = degToRad(23.439291 - 0.0130042 * T);
+    const y = Math.tan(epsilon / 2) ** 2;
+
+    const equationOfTimeMinutes = 4 * radToDeg(
+        y * Math.sin(2 * L0) - 2 * e * Math.sin(M) + 4 * e * y * Math.sin(M) * Math.cos(2 * L0)
+        - 0.5 * y * y * Math.sin(4 * L0) - 1.25 * e * e * Math.sin(2 * M));
+    const declination = Math.asin(Math.sin(epsilon) * Math.sin(degToRad(sunLongitude(jd))));
 
     const latRad = degToRad(lat);
-    const declRad = degToRad(declination);
-
-    // Hour angle
-    const cosH = (Math.sin(degToRad(-0.83)) - Math.sin(latRad) * Math.sin(declRad)) /
-        (Math.cos(latRad) * Math.cos(declRad));
+    const cosH = (Math.sin(degToRad(-0.833)) - Math.sin(latRad) * Math.sin(declination)) /
+        (Math.cos(latRad) * Math.cos(declination));
+    const solarNoon = 12 - lng / 15 + utcOffset - equationOfTimeMinutes / 60;
 
     if (cosH > 1 || cosH < -1) {
-        return { sunrise: 6.0, sunset: 18.0 }; // Fallback
+        // Polar night or midnight sun: no sunrise; fall back to a 12-hour day around noon.
+        return { sunrise: solarNoon - 6, sunset: solarNoon + 6 };
     }
-
-    const H = radToDeg(Math.acos(cosH));
-
-    // Solar noon approximation
-    const Jnoon = 2451545.0 + Math.round(jd - 2451545.0 - lng / 360) + lng / 360;
-    const noonLST = 12.0 + (Jnoon - jd) * 24 + utcOffset - (lng / 15 - utcOffset);
-
-    // Simplified: sunrise/sunset from noon
-    const solarNoonHours = 12.0 + (4 * (75.0 - lng) / 60); // Approx for IST
-    const halfDay = H / 15;
-
-    return {
-        sunrise: solarNoonHours - halfDay,
-        sunset: solarNoonHours + halfDay
-    };
+    const halfDay = radToDeg(Math.acos(cosH)) / 15;
+    return { sunrise: solarNoon - halfDay, sunset: solarNoon + halfDay };
 }
 
 // ============================================================
@@ -611,8 +607,8 @@ function elongationAt(date) {
 /**
  * Compute panchang for a different date (for date converter)
  */
-export function panchangForDate(year, month, day) {
+export function panchangForDate(year, month, day, location = DEFAULT_LOCATION) {
     // A day's tithi is the one prevailing at sunrise; 6 AM local is a close stand-in.
     const date = new Date(year, month - 1, day, 6);
-    return computePanchang(date);
+    return computePanchang(date, location);
 }

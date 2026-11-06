@@ -3,15 +3,37 @@
  * Date helpers, location utils, formatting
  */
 
-export const DEFAULT_LOCATION = {
-    name: 'Bengaluru',
-    state: 'Karnataka',
-    country: 'India',
-    lat: 12.9716,
-    lng: 77.5946,
-    timezone: 'Asia/Kolkata',
-    utcOffset: 5.5
+const IST = { country: 'India', timezone: 'Asia/Kolkata', utcOffset: 5.5 };
+
+export const LOCATIONS = {
+    bengaluru: { id: 'bengaluru', name: 'Bengaluru', state: 'Karnataka', lat: 12.9716, lng: 77.5946, ...IST },
+    delhi:     { id: 'delhi', name: 'New Delhi', state: 'Delhi', lat: 28.6139, lng: 77.2090, ...IST },
+    mumbai:    { id: 'mumbai', name: 'Mumbai', state: 'Maharashtra', lat: 19.0760, lng: 72.8777, ...IST },
+    chennai:   { id: 'chennai', name: 'Chennai', state: 'Tamil Nadu', lat: 13.0827, lng: 80.2707, ...IST },
+    kolkata:   { id: 'kolkata', name: 'Kolkata', state: 'West Bengal', lat: 22.5726, lng: 88.3639, ...IST },
+    varanasi:  { id: 'varanasi', name: 'Varanasi', state: 'Uttar Pradesh', lat: 25.3176, lng: 82.9739, ...IST },
+    ujjain:    { id: 'ujjain', name: 'Ujjain', state: 'Madhya Pradesh', lat: 23.1765, lng: 75.7885, ...IST },
+    hyderabad: { id: 'hyderabad', name: 'Hyderabad', state: 'Telangana', lat: 17.3850, lng: 78.4867, ...IST }
 };
+
+export const DEFAULT_LOCATION = LOCATIONS.bengaluru;
+
+/**
+ * A location for the device's own coordinates. Its clock is the device's time zone,
+ * which is the clock all of the app's local times are read on.
+ */
+export function deviceLocation(lat, lng) {
+    const ns = lat >= 0 ? 'N' : 'S';
+    const ew = lng >= 0 ? 'E' : 'W';
+    return {
+        id: 'current',
+        name: 'Current location',
+        state: `${Math.abs(lat).toFixed(2)}°${ns}, ${Math.abs(lng).toFixed(2)}°${ew}`,
+        lat,
+        lng,
+        utcOffset: -new Date().getTimezoneOffset() / 60
+    };
+}
 
 /**
  * Get current app date (now)
