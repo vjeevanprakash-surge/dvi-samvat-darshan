@@ -11,7 +11,7 @@
 - **Offline Panchang** — Astronomical calculations for tithi, nakshatra, yoga, karana
 - **Festival Tracking** — 15+ major Hindu festivals with significance, rituals, countdowns
 - **Timeline Badges** — Sunrise, sunset, Rahu Kaal, Gulika Kaal
-- **Location Picker** — Eight Indian cities or your device's location; sunrise, kaals and festival days follow it
+- **Location Picker** — 78 Indian cities, grouped by region, or your device's location; sunrise, kaals and festival days follow it
 - **PWA** — Installable, offline-first, mobile-optimized
 
 ## 🚀 Usage

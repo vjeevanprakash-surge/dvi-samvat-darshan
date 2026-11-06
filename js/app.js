@@ -3,7 +3,7 @@
  * Initializes panchang, mandala, navigation, and renders all screens.
  */
 
-import { getAppDate, formatGregorianDate, DEFAULT_LOCATION, LOCATIONS, deviceLocation } from './utils.js';
+import { getAppDate, formatGregorianDate, DEFAULT_LOCATION, LOCATIONS, REGIONS, deviceLocation } from './utils.js';
 import { computePanchang, panchangForDate } from './panchang.js';
 import { findFestivals, getUpcomingFestivals, getAllFestivals } from './festivals.js';
 import { initMandala, updateMandala } from './mandala.js';
@@ -542,9 +542,16 @@ function showLocationSetting(message) {
 
 function setupLocationPicker() {
     const select = document.getElementById('loc-select');
-    select.innerHTML = Object.values(LOCATIONS)
-        .map(loc => `<option value="${loc.id}">${loc.name}</option>`).join('') +
-        ('geolocation' in navigator ? '<option value="current">📍 Use my location</option>' : '');
+    const groups = REGIONS.map(region => {
+        const options = Object.values(LOCATIONS)
+            .filter(loc => loc.region === region)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(loc => `<option value="${loc.id}">${loc.name}</option>`).join('');
+        return `<optgroup label="${region} India">${options}</optgroup>`;
+    });
+    select.innerHTML =
+        ('geolocation' in navigator ? '<option value="current">📍 Use my location</option>' : '') +
+        groups.join('');
     showLocationSetting();
 
     select.addEventListener('change', () => {
