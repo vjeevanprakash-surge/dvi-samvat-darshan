@@ -1,47 +1,49 @@
 # 🕉️ Dvi-Samvat Darshan
 
-**Premium Hindu Panchang** with a living digital mandala, dual calendar view (Vikram Samvat + Shaka Samvat), and immersive festival experiences.
+**Hindu Panchang for Android, iOS and the web**, built around a 24-hour day clock that shows when the auspicious and avoided periods of the day fall, with Vikram and Shaka Samvat dating.
 
-**🌐 Live app:** https://vjeevanprakash-surge.github.io/dvi-samvat-darshan/ — open it on a phone and use "Add to Home Screen" to install it.
+**🌐 Live app:** https://vjeevanprakash-surge.github.io/dvi-samvat-darshan/
 
 ## ✨ Features
 
-- **Mandala Dashboard** — Three concentric rings (Tithi, Nakshatra, Yoga) with animated central moon
-- **Dual Samvat** — Vikram & Shaka calendar badges
-- **Offline Panchang** — Astronomical calculations for tithi, nakshatra, yoga, karana
-- **Festival Tracking** — 15+ major Hindu festivals with significance, rituals, countdowns
-- **Timeline Badges** — Sunrise, sunset, Rahu Kaal, Gulika Kaal
-- **Location Picker** — 78 Indian cities and 39 worldwide (Nepal, Sri Lanka, Southeast Asia, Gulf, Africa, Europe, Americas), or your device's location; dates, sunrise, kaals and festival days are computed on that place's own clock, including daylight saving
-- **PWA** — Installable, offline-first, mobile-optimized
+- **Day clock:** a 24-hour dial with day and night, Brahma Muhurta and Abhijit on the outer track, Rahu, Gulika and Yamaganda Kaal on the inner track, and a "now" hand. Tap any arc or time to see what it means.
+- **Today:** tithi, nakshatra, yoga, karana, weekday and moon phase, each with the time it changes. Step through days with the arrows.
+- **Calendar:** a month grid marking Purnima, Amavasya and festivals; tap a day for its panchang or open its day clock.
+- **Festivals:** the coming months' festivals and vrats with their observance rule, significance and rituals.
+- **Location:** 78 Indian cities and 39 worldwide, or the device's location. Dates, sunrise, kaals and festival days are computed on that place's own clock, including daylight saving.
+- **Offline calculation:** sidereal (Lahiri) positions, computed on the device.
 
-## 🚀 Usage
+## 🚀 Running it
 
-Use the [live app](https://vjeevanprakash-surge.github.io/dvi-samvat-darshan/), or run it locally. Serve the folder over HTTP — opening `index.html` straight from disk (`file://`) won't work, because ES modules and the service worker need an HTTP origin.
+The app lives in `mobile/` (Expo, React Native).
 
-- `pwsh -File serve.ps1` → http://localhost:8765
-- or any static server: `npx serve .`
+```bash
+cd mobile
+npm install
+npx expo start
+```
 
-## 🎨 Design
+Press `a` for Android (an emulator or Expo Go on a phone), `i` for iOS, or `w` for the web.
 
-Vedic-inspired dark theme with saffron-gold-indigo palette, sacred geometry, micro-animations, and responsive mobile-first layout.
+Pushing to `main` builds the web version and deploys it to GitHub Pages (`.github/workflows/pages.yml`).
 
 ## 📁 Structure
 
 ```
-├── index.html        — App shell
-├── styles.css        — Design system
-├── js/
-│   ├── app.js        — Main orchestrator
-│   ├── panchang.js   — Offline panchang engine
-│   ├── mandala.js    — Canvas mandala renderer
-│   ├── festivals.js  — Festival database
-│   └── utils.js      — Date/math utilities
-├── manifest.json     — PWA manifest
-└── sw.js             — Service worker
+├── js/                — Panchang engine (plain ES modules, shared)
+│   ├── panchang.js    — Tithi, nakshatra, yoga, karana, kaals, limb change times
+│   ├── festivals.js   — Festival database and observance rules
+│   └── utils.js       — Astronomy, locations and time zones
+├── mobile/            — The app (Expo Router)
+│   └── src/
+│       ├── app/       — Screens: Today, Calendar, Festivals, Settings
+│       ├── components/ — Day clock, icons, cards
+│       └── engine.ts  — Typed bridge to ../js
+└── index.html, styles.css, js/app.js, js/mandala.js — The original web PWA (no longer deployed)
 ```
 
 ## 📅 Date & Calendar Conventions
 
-The dashboard follows the device's current date and time. Lunar months use the
+The app follows the device's current date and time. Lunar months use the
 purnimanta (North Indian) reckoning, and Vikram/Shaka years turn over at Chaitra
 Shukla Pratipada (Ugadi / Gudi Padwa).
