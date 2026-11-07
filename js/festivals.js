@@ -627,15 +627,18 @@ function assignFestivals(day, next) {
 /**
  * Get upcoming festivals (scans next 120 days dynamically), dated on the location's calendar
  */
-export function getUpcomingFestivals(startDate, limit = 5, location = DEFAULT_LOCATION) {
+export function getUpcomingFestivals(startDate, limit = 5, location = DEFAULT_LOCATION, { includeToday = false } = {}) {
     const upcoming = [];
     const scanLimit = 120; // Look ahead 4 months
     const seenNames = new Set();
 
-    // Add today's festivals to seenNames so we don't repeat them in "Upcoming"
-    const todayPanchang = computePanchang(startDate, location);
-    const todayFestivals = findFestivals(todayPanchang);
-    todayFestivals.forEach(f => seenNames.add(f.name));
+    // The web dashboard shows the current tithi's festivals separately, so by default they are
+    // left out here; includeToday lists them too, dated by their observance rule like the rest,
+    // along with today's minor observances (Pradosham, Ekadashi, …).
+    if (!includeToday) {
+        const todayPanchang = computePanchang(startDate, location);
+        findFestivals(todayPanchang).forEach(f => seenNames.add(f.name));
+    }
 
     // Processing day i can place festivals on day i or i + 1, so day i is final once processed.
     const byDay = new Map();
@@ -654,11 +657,12 @@ export function getUpcomingFestivals(startDate, limit = 5, location = DEFAULT_LO
         const sameDay = (byDay.get(i) || []).sort((a, b) => (a.lunarMonth === '*') - (b.lunarMonth === '*'));
         for (const f of sameDay) {
             // Only show Major festivals in the "Upcoming" list to avoid clutter
-            if (!seenNames.has(f.name) && f.importance === 'major') {
+            if (!seenNames.has(f.name) && (f.importance === 'major' || (includeToday && i === 0))) {
                 upcoming.push({
                     ...f,
                     daysAway: i,
-                    date: formatGregorianDate(day.noon, location.timezone)
+                    date: formatGregorianDate(day.noon, location.timezone),
+                    ymd: zonedDate(day.noon, location.timezone)
                 });
                 seenNames.add(f.name);
             }
@@ -668,7 +672,7 @@ export function getUpcomingFestivals(startDate, limit = 5, location = DEFAULT_LO
         if (upcoming.length >= limit) break;
     }
 
-    return upcoming;
+    return upcoming.slice(0, limit);
 }
 
 /**

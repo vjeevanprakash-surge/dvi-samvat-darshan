@@ -3,7 +3,7 @@
  * Cache-first strategy for offline-first operation.
  */
 
-const CACHE_NAME = 'samvat-v14';
+const CACHE_NAME = 'samvat-v15';
 const ASSETS = [
     './',
     './index.html',

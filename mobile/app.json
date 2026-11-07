@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Samvat",
+    "slug": "samvat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vjeevanprakash.samvat"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.vjeevanprakash.samvat"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Samvat uses your location to compute sunrise, sunset and panchang timings for where you are."
+        }
+      ]
+    ],
+    "scheme": "samvat",
+    "experiments": {
+      "typedRoutes": true,
+      "baseUrl": "/dvi-samvat-darshan"
+    }
+  }
+}

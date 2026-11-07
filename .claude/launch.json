@@ -6,6 +6,12 @@
       "runtimeExecutable": "pwsh",
       "runtimeArgs": ["-NoProfile", "-File", "serve.ps1"],
       "port": 8765
+    },
+    {
+      "name": "mobile-web",
+      "runtimeExecutable": "pwsh",
+      "runtimeArgs": ["-NoProfile", "-Command", "Set-Location mobile; npx expo start --web --port 8081"],
+      "port": 8081
     }
   ]
 }

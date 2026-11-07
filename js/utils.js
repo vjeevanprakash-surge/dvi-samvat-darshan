@@ -160,10 +160,17 @@ export function deviceTimeZone() {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-/** Whether two IANA names are the same zone; aliases such as Asia/Kolkata and Asia/Calcutta match. */
+/**
+ * Whether two zones keep the same clock: equal UTC offsets now and in mid-January and mid-July,
+ * so daylight saving is covered. Names alone are unreliable: aliases (Asia/Kolkata and
+ * Asia/Calcutta) differ, and engines such as Hermes don't canonicalise them the same way.
+ */
 export function sameTimeZone(a, b) {
-    const canonical = tz => new Intl.DateTimeFormat('en-US', { timeZone: tz }).resolvedOptions().timeZone;
-    return canonical(a) === canonical(b);
+    if (a === b) return true;
+    const now = Date.now();
+    const year = new Date(now).getUTCFullYear();
+    return [now, Date.UTC(year, 0, 15), Date.UTC(year, 6, 15)]
+        .every(t => utcOffsetAt(new Date(t), a) === utcOffsetAt(new Date(t), b));
 }
 
 /** A location for the device's own coordinates, on the device's time zone. */

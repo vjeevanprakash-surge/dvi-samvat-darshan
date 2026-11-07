@@ -599,6 +599,50 @@ export function isBhadraAt(date) {
     return karanaNumber >= 1 && karanaNumber <= 56 && (karanaNumber - 1) % 7 === 6;
 }
 
+/**
+ * Tithi, nakshatra, yoga and karana numbers at a moment: the same reckoning as
+ * computePanchang, without sunrise, kaals or planets, so it is cheap to search over.
+ */
+export function limbsAt(date) {
+    const jd = date.getTime() / 86400000 + 2440587.5;
+    const sunLon = sunLongitude(jd);
+    const moonLon = moonLongitude(jd);
+    const ayanamsa = lahiriAyanamsa(jd);
+    const elongation = normalizeDeg(moonLon - sunLon);
+    const segment = 360 / 27;
+    return {
+        tithi: Math.min(29, Math.floor(elongation / 12)),
+        karana: Math.min(59, Math.floor(elongation / 6)),
+        nakshatra: Math.min(26, Math.floor(normalizeDeg(moonLon - ayanamsa) / segment)),
+        yoga: Math.min(26, Math.floor(normalizeDeg(sunLon + moonLon - 2 * ayanamsa) / segment))
+    };
+}
+
+/**
+ * When the given limb ('tithi' | 'nakshatra' | 'yoga' | 'karana') last changed before
+ * `date` and next changes after it. Each lasts roughly 6–26 hours, so the search
+ * steps an hour at a time and then bisects to the minute.
+ */
+export function limbSpan(limb, date) {
+    const value = limbsAt(date)[limb];
+    const HOUR = 3600000;
+    const edge = direction => {
+        let inside = date.getTime();
+        let outside = inside;
+        for (let i = 0; i < 48; i++) {
+            outside += direction * HOUR;
+            if (limbsAt(new Date(outside))[limb] !== value) break;
+            inside = outside;
+        }
+        while (Math.abs(outside - inside) > 30000) {
+            const mid = (inside + outside) / 2;
+            if (limbsAt(new Date(mid))[limb] === value) inside = mid; else outside = mid;
+        }
+        return new Date(direction > 0 ? outside : inside);
+    };
+    return { start: edge(-1), end: edge(1) };
+}
+
 function elongationAt(date) {
     const jd = date.getTime() / 86400000 + 2440587.5;
     return normalizeDeg(moonLongitude(jd) - sunLongitude(jd));
