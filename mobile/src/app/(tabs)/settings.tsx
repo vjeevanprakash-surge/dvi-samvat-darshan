@@ -1,16 +1,24 @@
 import * as ExpoLocation from 'expo-location';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, SectionList, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ui';
 import { LOCATIONS, REGIONS, deviceLocation, timeZoneLabel, type Location } from '@/engine';
 import { useApp } from '@/state';
-import { colors, fonts } from '@/theme';
+import { fonts, makeStyles, useTheme, type ThemePreference } from '@/theme';
 
 const ALL: Location[] = Object.values(LOCATIONS);
 
+const APPEARANCE: { value: ThemePreference; label: string }[] = [
+    { value: 'system', label: 'System' },
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+];
+
 export default function SettingsScreen() {
+    const styles = useStyles();
+    const { colors, preference, setPreference } = useTheme();
     const { location, setLocation } = useApp();
     const [query, setQuery] = useState('');
     const [locating, setLocating] = useState(false);
@@ -53,7 +61,19 @@ export default function SettingsScreen() {
                 contentContainerStyle={styles.content}
                 ListHeaderComponent={
                     <View style={{ gap: 12, marginBottom: 8 }}>
-                        <Text style={styles.title} accessibilityRole="header">Location</Text>
+                        <Text style={styles.title} accessibilityRole="header">Appearance</Text>
+                        <View style={styles.segments} accessibilityRole="radiogroup">
+                            {APPEARANCE.map(o => {
+                                const on = o.value === preference;
+                                return (
+                                    <Pressable key={o.value} onPress={() => setPreference(o.value)} style={[styles.segment, on && styles.segmentOn]}
+                                        accessibilityRole="radio" accessibilityState={{ checked: on }}>
+                                        <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{o.label}</Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                        <Text style={[styles.title, { marginTop: 16 }]} accessibilityRole="header">Location</Text>
                         <Text style={styles.subtle}>
                             {"Sunrise, sunset, the day's timings and festival dates are worked out for this place, on its own clock."}
                         </Text>
@@ -98,10 +118,18 @@ export default function SettingsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
     screen: { flex: 1, backgroundColor: colors.bg },
     content: { padding: 16, paddingBottom: 32, width: '100%', maxWidth: 640, alignSelf: 'center' },
     title: { fontFamily: fonts.bold, fontSize: 30, letterSpacing: -0.5, color: colors.text },
+    segments: {
+        flexDirection: 'row', padding: 4, gap: 4, borderRadius: 14,
+        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    },
+    segment: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    segmentOn: { backgroundColor: colors.text },
+    segmentText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.muted },
+    segmentTextOn: { color: colors.inverse },
     subtle: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted },
     current: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
     button: {
@@ -124,4 +152,4 @@ const styles = StyleSheet.create({
     divider: { borderTopWidth: 1, borderTopColor: colors.divider },
     rowName: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
     rowMeta: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-});
+}));

@@ -3,10 +3,10 @@ import {
     computePanchang, panchangForDate, limbSpan, getUpcomingFestivals, zonedDateTime, type CivilDate, type Limb
 } from './engine';
 import { useApp } from './state';
-import { periodColors } from './theme';
+import { useTheme, type PeriodColors } from './theme';
 import { civilOf, clockHours, sameCivil, momentLabel, weekdayName, weekdayOf } from './time';
 
-export type PeriodId = keyof typeof periodColors;
+export type PeriodId = keyof PeriodColors;
 
 export type Period = {
     id: PeriodId;
@@ -63,12 +63,11 @@ export function useDay() {
         // The moment the limbs are read at: now for today, sunrise for any other day.
         const moment = isToday ? now : zonedDateTime(day.year, day.month, day.day, sunrise, tz);
 
-        const periods: Period[] = PERIOD_ORDER.map(id => ({
+        const periods: Omit<Period, 'color'>[] = PERIOD_ORDER.map(id => ({
             id,
             ...PERIOD_INFO[id],
             start: p.kaals[id].start,
             end: p.kaals[id].end,
-            color: periodColors[id],
         }));
 
         const until = (limb: Limb) => momentLabel(limbSpan(limb, moment).end, day, tz);
@@ -102,8 +101,16 @@ export function useDay() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dayKey, isToday]);
 
+    const { periodColors } = useTheme();
+    // Colours sit outside the day's model so a theme change doesn't recompute the panchang.
+    const periods = useMemo(
+        () => model.periods.map(p => ({ ...p, color: periodColors[p.id] })),
+        [model.periods, periodColors],
+    );
+
     return {
         ...model,
+        periods,
         festivals,
         day,
         today,

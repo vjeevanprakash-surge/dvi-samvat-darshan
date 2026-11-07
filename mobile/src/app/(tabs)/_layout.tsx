@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Icon, type IconName } from '@/components/Icon';
-import { colors, fonts } from '@/theme';
+import { fonts, useTheme } from '@/theme';
 
 const TABS: { name: string; title: string; icon: IconName }[] = [
     { name: 'index', title: 'Today', icon: 'clock' },
@@ -10,6 +10,7 @@ const TABS: { name: string; title: string; icon: IconName }[] = [
 ];
 
 export default function TabLayout() {
+    const { colors } = useTheme();
     return (
         <Tabs
             screenOptions={{

@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Card, DateTile } from '@/components/ui';
 import { getUpcomingFestivals } from '@/engine';
 import { useApp } from '@/state';
-import { colors, fonts } from '@/theme';
+import { fonts, makeStyles, useTheme } from '@/theme';
 import { civilOf, longDate, monthName } from '@/time';
 
 const OBSERVANCE: Record<string, string> = {
@@ -16,6 +16,8 @@ const OBSERVANCE: Record<string, string> = {
 };
 
 export default function FestivalsScreen() {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const { location, now } = useApp();
     const today = civilOf(now, location.timezone);
     const todayKey = `${today.year}-${today.month}-${today.day}`;
@@ -82,7 +84,7 @@ export default function FestivalsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
     screen: { flex: 1, backgroundColor: colors.bg },
     content: { padding: 16, paddingBottom: 32, width: '100%', maxWidth: 640, alignSelf: 'center' },
     title: { fontFamily: fonts.bold, fontSize: 30, letterSpacing: -0.5, color: colors.text },
@@ -94,4 +96,4 @@ const styles = StyleSheet.create({
     body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 21, color: colors.body },
     ritual: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
     bullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent, marginTop: 8 },
-});
+}));

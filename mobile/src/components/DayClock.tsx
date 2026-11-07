@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 import type { Period, PeriodId } from '../useDay';
-import { colors, fonts } from '../theme';
+import { fonts, useTheme } from '../theme';
 
 const VIEW = 340;
 const C = VIEW / 2;
@@ -42,6 +42,7 @@ type Props = {
 };
 
 export function DayClock({ size, sunrise, sunset, periods, selected, onSelect, nowHours, accessibilityLabel, children }: Props) {
+    const { colors } = useTheme();
     const hand = nowHours === null ? null : [point(126, nowHours), point(146, nowHours)];
     // The centre text sits inside the inner track.
     const inner = (size * (R_AVOID - 12) * 2) / VIEW;
@@ -67,7 +68,7 @@ export function DayClock({ size, sunrise, sunset, periods, selected, onSelect, n
                     <>
                         <Line x1={hand[0][0]} y1={hand[0][1]} x2={hand[1][0]} y2={hand[1][1]}
                             stroke={colors.text} strokeWidth={3} strokeLinecap="round" />
-                        <Circle cx={hand[1][0]} cy={hand[1][1]} r={6} fill={colors.text} stroke="#FFFFFF" strokeWidth={2} />
+                        <Circle cx={hand[1][0]} cy={hand[1][1]} r={6} fill={colors.text} stroke={colors.surface} strokeWidth={2} />
                     </>
                 )}
             </Svg>

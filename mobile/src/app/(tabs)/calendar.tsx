@@ -1,18 +1,20 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Card, Eyebrow, SectionTitle } from '@/components/ui';
 import { getUpcomingFestivals, panchangForDate, zonedDateTime, type CivilDate } from '@/engine';
 import { useApp } from '@/state';
-import { colors, fonts } from '@/theme';
+import { fonts, makeStyles, useTheme } from '@/theme';
 import { civilOf, formatHours, longDate, monthName, sameCivil } from '@/time';
 
 const WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const key = (c: CivilDate) => `${c.year}-${c.month}-${c.day}`;
 
 export default function CalendarScreen() {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const { location, now, setViewDate } = useApp();
     const today = civilOf(now, location.timezone);
     const [month, setMonth] = useState({ year: today.year, month: today.month });
@@ -77,11 +79,11 @@ export default function CalendarScreen() {
                                     accessibilityLabel={`${longDate(civil)}, ${p.tithi.paksha} ${p.tithi.name}`}
                                     accessibilityState={{ selected: isPicked }}
                                     style={[styles.cell, { width: cell, height: cell + 8 }, isPicked && styles.cellPicked]}>
-                                    <Text style={[styles.cellDay, isToday && { color: colors.accent }, isPicked && { color: '#FFFFFF' }]}>{civil.day}</Text>
+                                    <Text style={[styles.cellDay, isToday && { color: colors.accent }, isPicked && { color: colors.inverse }]}>{civil.day}</Text>
                                     <View style={styles.markers}>
                                         {fullMoon && <View style={[styles.moon, { backgroundColor: colors.day }]} />}
                                         {newMoon && <View style={[styles.moon, { backgroundColor: colors.night }]} />}
-                                        {hasFestival && <View style={[styles.festDot, isPicked && { backgroundColor: '#FFFFFF' }]} />}
+                                        {hasFestival && <View style={[styles.festDot, isPicked && { backgroundColor: colors.inverse }]} />}
                                     </View>
                                 </Pressable>
                             );
@@ -134,7 +136,7 @@ export default function CalendarScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
     screen: { flex: 1, backgroundColor: colors.bg },
     content: { padding: 16, paddingBottom: 32, gap: 16, width: '100%', maxWidth: 560, alignSelf: 'center' },
     monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -158,5 +160,5 @@ const styles = StyleSheet.create({
     factValue: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
     festLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     button: { minHeight: 48, borderRadius: 14, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-    buttonText: { fontFamily: fonts.semibold, fontSize: 15, color: '#FFFFFF' },
-});
+    buttonText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onAccent },
+}));

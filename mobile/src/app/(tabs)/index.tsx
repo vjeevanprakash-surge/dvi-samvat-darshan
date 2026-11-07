@@ -1,13 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DayClock } from '@/components/DayClock';
 import { Icon } from '@/components/Icon';
 import { Card, DateTile, Eyebrow, SectionTitle } from '@/components/ui';
 import { deviceTimeZone, sameTimeZone, timeZoneLabel } from '@/engine';
 import { useApp } from '@/state';
-import { colors, fonts } from '@/theme';
+import { fonts, makeStyles, useTheme } from '@/theme';
 import { addDays, duration, formatHours, monthName, sameCivil, shortDate } from '@/time';
 import { useDay, type Period, type PeriodId } from '@/useDay';
 
@@ -32,6 +32,8 @@ function defaultPeriod(periods: Period[], nowHours: number | null): PeriodId {
 }
 
 export default function TodayScreen() {
+    const styles = useStyles();
+    const { colors, periodColors } = useTheme();
     const { setViewDate } = useApp();
     const d = useDay();
     const { width } = useWindowDimensions();
@@ -142,8 +144,8 @@ export default function TodayScreen() {
                 {[
                     [colors.day, `Day ${formatHours(d.sunrise)}–${formatHours(d.sunset)}`],
                     [colors.night, 'Night'],
-                    ['#1D4ED8', 'Auspicious (outer)'],
-                    ['#D9531E', 'Best avoided (inner)'],
+                    [periodColors.abhijit, 'Auspicious (outer)'],
+                    [periodColors.rahu, 'Best avoided (inner)'],
                 ].map(([color, label]) => (
                     <View key={label} style={styles.legendItem}>
                         <View style={[styles.swatch, { backgroundColor: color }]} />
@@ -256,7 +258,7 @@ export default function TodayScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
     screen: { flex: 1, backgroundColor: colors.bg },
     content: { padding: 16, paddingBottom: 32, gap: 20, width: '100%', maxWidth: 560, alignSelf: 'center' },
     contentWide: { maxWidth: 1000, paddingHorizontal: 24 },
@@ -308,4 +310,4 @@ const styles = StyleSheet.create({
     festRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16 },
     festName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.text },
     festWhen: { fontFamily: fonts.semibold, fontSize: 13, color: colors.muted },
-});
+}));
