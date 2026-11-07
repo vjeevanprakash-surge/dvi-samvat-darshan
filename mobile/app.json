@@ -48,6 +48,12 @@
     "experiments": {
       "typedRoutes": true,
       "baseUrl": "/dvi-samvat-darshan"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "330c77c5-15cc-4881-9006-14be3d655d87"
+      }
+    },
+    "owner": "jeev.prakash"
   }
 }
