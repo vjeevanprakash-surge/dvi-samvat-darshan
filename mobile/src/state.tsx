@@ -18,6 +18,26 @@ type AppContextValue = {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+/**
+ * Reads a saved location: a catalogue id, a whole device location, or the
+ * old web app's `{"id": "..."}` record, which shares this storage key on the web.
+ * Anything else is ignored so a bad value can't break every calculation.
+ */
+function parseSavedLocation(saved: string): Location | null {
+    if (LOCATIONS[saved]) return LOCATIONS[saved];
+    try {
+        const value = JSON.parse(saved);
+        if (typeof value?.id === 'string' && LOCATIONS[value.id]) return LOCATIONS[value.id];
+        const valid = Number.isFinite(value?.lat) && Number.isFinite(value?.lng)
+            && typeof value?.timezone === 'string' && typeof value?.name === 'string';
+        if (!valid) return null;
+        new Intl.DateTimeFormat('en', { timeZone: value.timezone });
+        return value as Location;
+    } catch {
+        return null;
+    }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
     const [location, setLocationState] = useState<Location>(DEFAULT_LOCATION);
     const [viewDate, setViewDate] = useState<CivilDate | null>(null);
@@ -25,9 +45,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         AsyncStorage.getItem(LOCATION_KEY).then(saved => {
-            if (!saved) return;
-            if (saved.startsWith('{')) setLocationState(JSON.parse(saved));
-            else if (LOCATIONS[saved]) setLocationState(LOCATIONS[saved]);
+            const restored = saved ? parseSavedLocation(saved) : null;
+            if (restored) setLocationState(restored);
         }).catch(() => {});
     }, []);
 
