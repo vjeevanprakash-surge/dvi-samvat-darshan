@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Text, View, type TextProps, type ViewStyle, type StyleProp } from 'react-native';
+import { Pressable, Text, View, type TextProps, type ViewStyle, type StyleProp } from 'react-native';
 import { fonts, makeStyles, useTheme } from '../theme';
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
@@ -28,7 +28,37 @@ export function DateTile({ month, day, highlight }: { month: string; day: number
     );
 }
 
+/** A row of options where exactly one is picked. */
+export function Segmented<T extends string | number>({ options, value, onChange }: {
+    options: { value: T; label: string; accessibilityLabel?: string }[];
+    value: T;
+    onChange: (value: T) => void;
+}) {
+    const styles = useStyles();
+    return (
+        <View style={styles.segments} accessibilityRole="radiogroup">
+            {options.map(o => {
+                const on = o.value === value;
+                return (
+                    <Pressable key={o.value} onPress={() => onChange(o.value)} style={[styles.segment, on && styles.segmentOn]}
+                        accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={o.accessibilityLabel}>
+                        <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{o.label}</Text>
+                    </Pressable>
+                );
+            })}
+        </View>
+    );
+}
+
 const useStyles = makeStyles(colors => ({
+    segments: {
+        flexDirection: 'row', padding: 4, gap: 4, borderRadius: 14,
+        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    },
+    segment: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    segmentOn: { backgroundColor: colors.text },
+    segmentText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.muted },
+    segmentTextOn: { color: colors.inverse },
     card: {
         backgroundColor: colors.surface,
         borderColor: colors.border,

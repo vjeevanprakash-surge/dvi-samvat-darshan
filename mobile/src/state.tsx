@@ -9,6 +9,8 @@ const TICK_MS = 30 * 1000;
 type AppContextValue = {
     location: Location;
     setLocation: (location: Location) => void;
+    /** False until the saved location has been read; until then `location` is the default. */
+    locationLoaded: boolean;
     /** The day being viewed; null follows today. */
     viewDate: CivilDate | null;
     setViewDate: (date: CivilDate | null) => void;
@@ -40,6 +42,7 @@ function parseSavedLocation(saved: string): Location | null {
 
 export function AppProvider({ children }: { children: ReactNode }) {
     const [location, setLocationState] = useState<Location>(DEFAULT_LOCATION);
+    const [locationLoaded, setLocationLoaded] = useState(false);
     const [viewDate, setViewDate] = useState<CivilDate | null>(null);
     const [now, setNow] = useState(() => new Date());
 
@@ -47,7 +50,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(LOCATION_KEY).then(saved => {
             const restored = saved ? parseSavedLocation(saved) : null;
             if (restored) setLocationState(restored);
-        }).catch(() => {});
+        }).catch(() => {}).finally(() => setLocationLoaded(true));
     }, []);
 
     useEffect(() => {
@@ -65,10 +68,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const saved = next.id === 'current' ? JSON.stringify(next) : next.id;
             AsyncStorage.setItem(LOCATION_KEY, saved).catch(() => {});
         },
+        locationLoaded,
         viewDate,
         setViewDate,
         now,
-    }), [location, viewDate, now]);
+    }), [location, locationLoaded, viewDate, now]);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

@@ -3,11 +3,12 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, SectionList, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
-import { Card } from '@/components/ui';
+import { Card, Segmented } from '@/components/ui';
 import { LOCATIONS, REGIONS, deviceLocation, timeZoneLabel, type Location } from '@/engine';
 import { remindersSupported, useReminders, type ReminderLead } from '@/reminders';
 import { useApp } from '@/state';
 import { fonts, makeStyles, useTheme, type ThemePreference } from '@/theme';
+import { civilOf, momentLabel } from '@/time';
 
 const ALL: Location[] = Object.values(LOCATIONS);
 
@@ -17,18 +18,18 @@ const APPEARANCE: { value: ThemePreference; label: string }[] = [
     { value: 'dark', label: 'Dark' },
 ];
 
-const LEADS: { value: ReminderLead; label: string }[] = [
-    { value: 0, label: 'At start' },
-    { value: 10, label: '10 min' },
-    { value: 15, label: '15 min' },
-    { value: 30, label: '30 min' },
+const LEADS: { value: ReminderLead; label: string; accessibilityLabel: string }[] = [
+    { value: 0, label: 'At start', accessibilityLabel: 'When it starts' },
+    { value: 10, label: '10 min', accessibilityLabel: '10 minutes before' },
+    { value: 15, label: '15 min', accessibilityLabel: '15 minutes before' },
+    { value: 30, label: '30 min', accessibilityLabel: '30 minutes before' },
 ];
 
 function RahuReminder() {
     const styles = useStyles();
     const { colors } = useTheme();
-    const { location } = useApp();
-    const { settings, update, permission } = useReminders();
+    const { location, now } = useApp();
+    const { settings, update, permission, next, failed } = useReminders();
     const [refused, setRefused] = useState(false);
 
     if (!remindersSupported) {
@@ -43,7 +44,10 @@ function RahuReminder() {
         setRefused(false);
         if (!(await update({ rahu: on }))) setRefused(true);
     };
-    const blocked = refused || (settings.rahu && permission === 'denied');
+    // Tied to the real permission, so it clears as soon as notifications are allowed in the phone's settings.
+    const blocked = (refused || settings.rahu) && permission !== 'granted';
+    const nextLabel = next === null ? null
+        : momentLabel(new Date(next), civilOf(now, location.timezone), location.timezone);
 
     return (
         <Card style={styles.reminder}>
@@ -58,18 +62,10 @@ function RahuReminder() {
             {settings.rahu && (
                 <View style={{ gap: 8 }}>
                     <Text style={styles.label}>Remind me</Text>
-                    <View style={styles.segments} accessibilityRole="radiogroup">
-                        {LEADS.map(o => {
-                            const on = o.value === settings.lead;
-                            return (
-                                <Pressable key={o.value} onPress={() => update({ lead: o.value })} style={[styles.segment, on && styles.segmentOn]}
-                                    accessibilityRole="radio" accessibilityState={{ checked: on }}
-                                    accessibilityLabel={o.value ? `${o.value} minutes before` : 'When it starts'}>
-                                    <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{o.label}</Text>
-                                </Pressable>
-                            );
-                        })}
-                    </View>
+                    <Segmented options={LEADS} value={settings.lead} onChange={lead => update({ lead })} />
+                    {failed
+                        ? <Text style={[styles.subtle, { color: colors.accentText }]}>{"Couldn't set the reminders. Switch this off and on to try again."}</Text>
+                        : nextLabel && !blocked && <Text style={styles.subtle}>{`Next reminder: ${nextLabel}`}</Text>}
                 </View>
             )}
             {blocked && (
@@ -132,17 +128,7 @@ export default function SettingsScreen() {
                 ListHeaderComponent={
                     <View style={{ gap: 12, marginBottom: 8 }}>
                         <Text style={styles.title} accessibilityRole="header">Appearance</Text>
-                        <View style={styles.segments} accessibilityRole="radiogroup">
-                            {APPEARANCE.map(o => {
-                                const on = o.value === preference;
-                                return (
-                                    <Pressable key={o.value} onPress={() => setPreference(o.value)} style={[styles.segment, on && styles.segmentOn]}
-                                        accessibilityRole="radio" accessibilityState={{ checked: on }}>
-                                        <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{o.label}</Text>
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
+                        <Segmented options={APPEARANCE} value={preference} onChange={setPreference} />
                         <Text style={[styles.title, { marginTop: 16 }]} accessibilityRole="header">Reminders</Text>
                         <RahuReminder />
                         <Text style={[styles.title, { marginTop: 16 }]} accessibilityRole="header">Location</Text>
@@ -194,14 +180,6 @@ const useStyles = makeStyles(colors => ({
     screen: { flex: 1, backgroundColor: colors.bg },
     content: { padding: 16, paddingBottom: 32, width: '100%', maxWidth: 640, alignSelf: 'center' },
     title: { fontFamily: fonts.bold, fontSize: 30, letterSpacing: -0.5, color: colors.text },
-    segments: {
-        flexDirection: 'row', padding: 4, gap: 4, borderRadius: 14,
-        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    },
-    segment: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-    segmentOn: { backgroundColor: colors.text },
-    segmentText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.muted },
-    segmentTextOn: { color: colors.inverse },
     subtle: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted },
     reminder: { padding: 14, gap: 14 },
     reminderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
