@@ -175,12 +175,17 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     const settingsRef = useRef(settings);
     useEffect(() => { settingsRef.current = settings; }, [settings]);
 
+    const latestToggle = useRef(0);
+
     const update = useCallback(async (next: Partial<ReminderSettings>) => {
         if (!remindersSupported) return false;
+        const toggle = next.rahu === undefined ? 0 : ++latestToggle.current;
         if (next.rahu) {
             const perm = await askPermission().catch((): Permission => 'denied');
             setPermission(perm);
             if (perm !== 'granted') return false;
+            // Switched off again while the permission was being checked: the later tap wins.
+            if (toggle !== latestToggle.current) return true;
         }
         const merged = { ...settingsRef.current, ...next };
         settingsRef.current = merged;
