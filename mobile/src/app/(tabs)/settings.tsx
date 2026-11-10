@@ -1,10 +1,11 @@
 import * as ExpoLocation from 'expo-location';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, SectionList, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, SectionList, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ui';
 import { LOCATIONS, REGIONS, deviceLocation, timeZoneLabel, type Location } from '@/engine';
+import { remindersSupported, useReminders, type ReminderLead } from '@/reminders';
 import { useApp } from '@/state';
 import { fonts, makeStyles, useTheme, type ThemePreference } from '@/theme';
 
@@ -15,6 +16,75 @@ const APPEARANCE: { value: ThemePreference; label: string }[] = [
     { value: 'light', label: 'Light' },
     { value: 'dark', label: 'Dark' },
 ];
+
+const LEADS: { value: ReminderLead; label: string }[] = [
+    { value: 0, label: 'At start' },
+    { value: 10, label: '10 min' },
+    { value: 15, label: '15 min' },
+    { value: 30, label: '30 min' },
+];
+
+function RahuReminder() {
+    const styles = useStyles();
+    const { colors } = useTheme();
+    const { location } = useApp();
+    const { settings, update, permission } = useReminders();
+    const [refused, setRefused] = useState(false);
+
+    if (!remindersSupported) {
+        return (
+            <Card style={styles.reminder}>
+                <Text style={styles.subtle}>Rahu Kaal reminders are available in the Android app.</Text>
+            </Card>
+        );
+    }
+
+    const toggle = async (on: boolean) => {
+        setRefused(false);
+        if (!(await update({ rahu: on }))) setRefused(true);
+    };
+    const blocked = refused || (settings.rahu && permission === 'denied');
+
+    return (
+        <Card style={styles.reminder}>
+            <View style={styles.reminderRow}>
+                <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={styles.rowName}>Rahu Kaal</Text>
+                    <Text style={styles.subtle}>{`A notification before each day's Rahu Kaal in ${location.name}.`}</Text>
+                </View>
+                <Switch value={settings.rahu} onValueChange={toggle} accessibilityLabel="Rahu Kaal reminders"
+                    trackColor={{ false: colors.tick, true: colors.accent }} thumbColor="#FFFFFF" />
+            </View>
+            {settings.rahu && (
+                <View style={{ gap: 8 }}>
+                    <Text style={styles.label}>Remind me</Text>
+                    <View style={styles.segments} accessibilityRole="radiogroup">
+                        {LEADS.map(o => {
+                            const on = o.value === settings.lead;
+                            return (
+                                <Pressable key={o.value} onPress={() => update({ lead: o.value })} style={[styles.segment, on && styles.segmentOn]}
+                                    accessibilityRole="radio" accessibilityState={{ checked: on }}
+                                    accessibilityLabel={o.value ? `${o.value} minutes before` : 'When it starts'}>
+                                    <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{o.label}</Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                </View>
+            )}
+            {blocked && (
+                <View style={{ gap: 6 }}>
+                    <Text style={[styles.subtle, { color: colors.accentText }]}>
+                        {"Notifications are turned off for Samvat. Allow them in your phone's settings."}
+                    </Text>
+                    <Pressable onPress={() => Linking.openSettings()} accessibilityRole="button" hitSlop={8}>
+                        <Text style={styles.buttonText}>Open settings</Text>
+                    </Pressable>
+                </View>
+            )}
+        </Card>
+    );
+}
 
 export default function SettingsScreen() {
     const styles = useStyles();
@@ -73,6 +143,8 @@ export default function SettingsScreen() {
                                 );
                             })}
                         </View>
+                        <Text style={[styles.title, { marginTop: 16 }]} accessibilityRole="header">Reminders</Text>
+                        <RahuReminder />
                         <Text style={[styles.title, { marginTop: 16 }]} accessibilityRole="header">Location</Text>
                         <Text style={styles.subtle}>
                             {"Sunrise, sunset, the day's timings and festival dates are worked out for this place, on its own clock."}
@@ -131,6 +203,9 @@ const useStyles = makeStyles(colors => ({
     segmentText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.muted },
     segmentTextOn: { color: colors.inverse },
     subtle: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted },
+    reminder: { padding: 14, gap: 14 },
+    reminderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    label: { fontFamily: fonts.semibold, fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', color: colors.muted },
     current: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
     button: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48,

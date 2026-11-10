@@ -6,6 +6,7 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { RemindersProvider } from '@/reminders';
 import { AppProvider } from '@/state';
 import { ThemeProvider, useTheme } from '@/theme';
 
@@ -27,7 +28,9 @@ export default function RootLayout() {
         <SafeAreaProvider>
             <ThemeProvider>
                 <AppProvider>
-                    <Navigator />
+                    <RemindersProvider>
+                        <Navigator />
+                    </RemindersProvider>
                 </AppProvider>
             </ThemeProvider>
         </SafeAreaProvider>
